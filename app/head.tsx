@@ -1,8 +1,7 @@
-const title = 'React Three Next Starter'
-const url = 'https://react-three-next.vercel.app/'
-const description = 'The easiest and fastest way to create a 3D website using React Three Fiber and NextJS'
-const author = 'Author'
-const twitter = '@pmndrs'
+const title = 'JYNX EMBED'
+const url = 'https://card3d-rho.vercel.app/'
+const description = '3D Card Game Embed Using Three.js'
+const author = 'asarmichil'
 
 export default function Head() {
   return (
@@ -48,13 +47,7 @@ export default function Head() {
       <meta name='viewport' content='width=device-width, minimum-scale=1, initial-scale=1.0' />
       <meta name='theme-color' content='#000' />
       <link rel='shortcut icon' href='/icons/apple-touch-icon.png' />
-
-      {/* 
-      Twitter Summary card
-        documentation: https://dev.twitter.com/cards/getting-started
-        Be sure validate your Twitter card markup on the documentation site. */}
       <meta name='twitter:card' content='summary' />
-      <meta name='twitter:site' content={twitter} />
     </>
   )
-} 
+}
