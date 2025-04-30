@@ -1,140 +1,155 @@
 import React, { useRef, useState, useEffect, Suspense } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useTexture, Environment, OrbitControls, Html } from '@react-three/drei'
+import { Canvas, useFrame, ThreeEvent } from '@react-three/fiber'
+import { useTexture, Html, PresentationControls, Center, OrbitControls } from '@react-three/drei'
 import { useCardContext } from '../../contexts/CardContext'
 import * as THREE from 'three'
 
 // Card proportions in meters (0.063 x 0.088)
 const CARD_WIDTH = 0.063
 const CARD_HEIGHT = 0.088
-const CARD_DEPTH = 0.001
+const CARD_DEPTH = 0.0005 // Thinner card
 
 function CardMesh({ flipped, onFlip }) {
   // Progressive texture loading (low-res to high-res)
   const textures = useTexture({
     frontMap: '/assets/card frame Bitter Reprisal V8 (with card art).png',
     backMap: '/assets/cardback JYNX.png',
-    paperMap: '/assets/Paper Texture 340M.jpg',
+    normalMap: '/assets/papermaps/Watercolor Paper 001 NORM.jpg',
+    roughnessMap: '/assets/papermaps/Watercolor Paper Roughness.jpg',
+    aoMap: '/assets/papermaps/Watercolor Paper 001 OCC.jpg',
   })
 
-  const { frontMap, backMap, paperMap } = textures
-  const meshRef = useRef<THREE.Group>(null)
+  const { frontMap, backMap, normalMap, roughnessMap, aoMap } = textures
+  const groupRef = useRef<THREE.Group>(null)
   const [hovered, setHovered] = useState(false)
-  const [rotation, setRotation] = useState<[number, number, number]>([0, 0, 0])
-  const [scale, setScale] = useState(1)
-  const [isDragging, setIsDragging] = useState(false)
-  const [lastPointer, setLastPointer] = useState<[number, number] | null>(null)
-  const [momentum, setMomentum] = useState<[number, number]>([0, 0])
-  const [zoom, setZoom] = useState(1)
+  const [currentRotation, setCurrentRotation] = useState(0)
+  const [isPastHalfway, setIsPastHalfway] = useState(false)
+  const [isFlipping, setIsFlipping] = useState(false)
+  const [targetRotation, setTargetRotation] = useState(flipped ? Math.PI : 0)
 
-  // Apply correct texture settings
+  // Set up proper texture mapping
   useEffect(() => {
-    ;[frontMap, backMap, paperMap].forEach((texture) => {
-      if (texture) {
-        texture.flipY = false
-      }
-    })
-  }, [frontMap, backMap, paperMap])
+    if (frontMap && backMap) {
+      // Fix texture settings
+      ;[frontMap, backMap, normalMap, roughnessMap, aoMap].forEach((texture) => {
+        if (texture) {
+          // Prevent texture flipping
+          texture.flipY = false
 
-  // Idle breathing animation
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime()
-    setScale(1 + 0.012 * Math.sin(t * 1.2))
+          // Correct repetition settings
+          texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping
 
-    // Smooth momentum for rotation
-    if (!isDragging && (Math.abs(momentum[0]) > 0.0001 || Math.abs(momentum[1]) > 0.0001)) {
-      setRotation(([x, y, z]) => [x + momentum[1], y + momentum[0], z])
-      setMomentum(([mx, my]) => [mx * 0.95, my * 0.95])
+          // Set correct encoding
+          texture.colorSpace = THREE.SRGBColorSpace
+        }
+      })
+    }
+  }, [frontMap, backMap, normalMap, roughnessMap, aoMap])
+
+  // Update target rotation when flipped state changes
+  useEffect(() => {
+    setTargetRotation(flipped ? Math.PI : 0)
+  }, [flipped])
+
+  // Handle double-click to flip card
+  const handleDoubleClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    if (!isFlipping) {
+      onFlip()
+    }
+  }
+
+  // Track rotation and handle past halfway
+  useFrame(() => {
+    if (!groupRef.current) return
+
+    // Get current Y rotation (normalized to 0-2π range)
+    const rotation = groupRef.current.rotation.y % (Math.PI * 2)
+    const normalizedRotation = rotation < 0 ? rotation + Math.PI * 2 : rotation
+    setCurrentRotation(normalizedRotation)
+
+    // Determine if the card should be flipped based on current rotation
+    const shouldBeFlipped = normalizedRotation > Math.PI / 2 && normalizedRotation < (3 * Math.PI) / 2
+
+    // If we've crossed the halfway threshold and we're not already flipping
+    if (shouldBeFlipped !== flipped && !isFlipping) {
+      setIsFlipping(true)
+      onFlip()
+
+      // Reset flipping state after animation completes
+      setTimeout(() => {
+        setIsFlipping(false)
+      }, 500)
     }
   })
 
-  // Drag/rotate logic
-  const onPointerDown = (e: React.PointerEvent) => {
-    e.stopPropagation()
-    setIsDragging(true)
-    setLastPointer([e.clientX, e.clientY])
-  }
+  // Create a rounded rectangle shape for the card
+  const roundedRectShape = new THREE.Shape()
+  const radius = 0.002
 
-  const onPointerUp = (e: React.PointerEvent) => {
-    e.stopPropagation()
-    setIsDragging(false)
-    setLastPointer(null)
-  }
+  roundedRectShape.moveTo(-CARD_WIDTH / 2 + radius, -CARD_HEIGHT / 2)
+  roundedRectShape.lineTo(CARD_WIDTH / 2 - radius, -CARD_HEIGHT / 2)
+  roundedRectShape.quadraticCurveTo(CARD_WIDTH / 2, -CARD_HEIGHT / 2, CARD_WIDTH / 2, -CARD_HEIGHT / 2 + radius)
+  roundedRectShape.lineTo(CARD_WIDTH / 2, CARD_HEIGHT / 2 - radius)
+  roundedRectShape.quadraticCurveTo(CARD_WIDTH / 2, CARD_HEIGHT / 2, CARD_WIDTH / 2 - radius, CARD_HEIGHT / 2)
+  roundedRectShape.lineTo(-CARD_WIDTH / 2 + radius, CARD_HEIGHT / 2)
+  roundedRectShape.quadraticCurveTo(-CARD_WIDTH / 2, CARD_HEIGHT / 2, -CARD_WIDTH / 2, CARD_HEIGHT / 2 - radius)
+  roundedRectShape.lineTo(-CARD_WIDTH / 2, -CARD_HEIGHT / 2 + radius)
+  roundedRectShape.quadraticCurveTo(-CARD_WIDTH / 2, -CARD_HEIGHT / 2, -CARD_WIDTH / 2 + radius, -CARD_HEIGHT / 2)
 
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!isDragging || !lastPointer) return
-    e.stopPropagation()
-
-    const [lx, ly] = lastPointer
-    const dx = (e.clientX - lx) * 0.01
-    const dy = (e.clientY - ly) * 0.01
-
-    // Apply rotation without restrictions
-    setRotation(([x, y, z]) => [x + dy, y + dx, z])
-    setMomentum([dx, dy])
-    setLastPointer([e.clientX, e.clientY])
-  }
-
-  // Pinch-to-zoom (basic)
-  const onWheel = (e: React.WheelEvent) => {
-    setZoom((z) => Math.max(0.7, Math.min(1.5, z - e.deltaY * 0.001)))
+  const extrudeSettings = {
+    steps: 1,
+    depth: CARD_DEPTH,
+    bevelEnabled: false,
   }
 
   return (
     <group
-      ref={meshRef}
-      scale={[scale * zoom, scale * zoom, scale * zoom]}
-      rotation={[rotation[0], rotation[1], rotation[2]]}
-      onPointerDown={onPointerDown}
-      onPointerUp={onPointerUp}
-      onPointerMove={onPointerMove}
+      ref={groupRef}
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
-      onWheel={onWheel}
+      onDoubleClick={handleDoubleClick}
     >
       {/* Front of card */}
-      <mesh position={[0, 0, CARD_DEPTH / 2]}>
-        <planeGeometry args={[CARD_WIDTH, CARD_HEIGHT]} />
+      <mesh position={[0, 0, CARD_DEPTH / 2 + 0.00027]}>
+        <planeGeometry args={[CARD_WIDTH - 0.0005, CARD_HEIGHT - 0.0005]} />
         <meshPhysicalMaterial
           map={frontMap}
-          roughnessMap={paperMap}
-          normalMap={paperMap}
-          clearcoat={0.7}
-          clearcoatRoughness={0.2}
-          reflectivity={0.25}
-          metalness={0.05}
-          roughness={0.55}
-          iridescence={0.1}
+          normalMap={normalMap}
+          roughnessMap={roughnessMap}
+          aoMap={aoMap}
           side={THREE.FrontSide}
         />
       </mesh>
 
       {/* Back of card */}
-      <mesh position={[0, 0, -CARD_DEPTH / 2]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[CARD_WIDTH, CARD_HEIGHT]} />
+      <mesh position={[0, 0, -CARD_DEPTH / 2 - 0.00005]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[CARD_WIDTH - 0.0005, CARD_HEIGHT - 0.0005]} />
         <meshPhysicalMaterial
           map={backMap}
-          roughnessMap={paperMap}
-          normalMap={paperMap}
-          clearcoat={0.7}
-          clearcoatRoughness={0.2}
-          reflectivity={0.25}
-          metalness={0.05}
-          roughness={0.55}
-          iridescence={0.1}
+          normalMap={normalMap}
+          roughnessMap={roughnessMap}
+          aoMap={aoMap}
           side={THREE.FrontSide}
+          clearcoat={0.8}
+          clearcoatRoughness={0.2}
+          metalness={0.1}
+          reflectivity={0.5}
         />
       </mesh>
 
-      {/* Card edges */}
-      <mesh>
-        <boxGeometry args={[CARD_WIDTH, CARD_HEIGHT, CARD_DEPTH]} />
-        <meshPhysicalMaterial
+      {/* Card body with extrusion - rendered after front/back to fix z-order */}
+      <mesh renderOrder={-1}>
+        <extrudeGeometry args={[roundedRectShape, extrudeSettings]} />
+        <meshStandardMaterial
           color='#f8f8f8'
-          roughnessMap={paperMap}
-          normalMap={paperMap}
-          roughness={0.8}
-          side={THREE.BackSide}
+          roughnessMap={roughnessMap}
+          normalMap={normalMap}
+          aoMap={aoMap}
+          side={THREE.DoubleSide}
+          transparent={true}
+          opacity={1}
+          depthWrite={false}
         />
       </mesh>
     </group>
@@ -144,18 +159,44 @@ function CardMesh({ flipped, onFlip }) {
 export function Card3D() {
   const { flipped, setFlipped } = useCardContext()
 
+  // Create specific snap positions for front and back
+  const snapConfig = {
+    front: [0, 0, 0] as [number, number, number],
+    back: [0, Math.PI, 0] as [number, number, number],
+  }
+
   return (
     <div className='flex h-screen w-full items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-900 to-red-950'>
-      <div className='aspect-[63/88] h-[490px] w-[350px] overflow-visible rounded-2xl shadow-2xl md:h-[588px] md:w-[420px] lg:h-[705px] lg:w-[504px]'>
+      <div>
         <Canvas camera={{ position: [0, 0, 0.25], fov: 32 }} dpr={[1, 2]}>
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[0.2, 0.6, 1]} intensity={1.2} />
-          <directionalLight position={[-0.7, -0.3, 0.7]} intensity={0.7} />
-          <directionalLight position={[0, 0.7, -1]} intensity={0.5} />
+          <ambientLight intensity={0.7} />
+          <directionalLight position={[0.2, 0.6, 1]} intensity={1.5} />
+          <directionalLight position={[-0.7, -0.3, 0.7]} intensity={0.9} />
+          <directionalLight position={[0, 0.7, -1]} intensity={0.8} />
           <Suspense fallback={<Html center>Loading Card...</Html>}>
-            <CardMesh flipped={flipped} onFlip={() => setFlipped(!flipped)} />
+            <OrbitControls
+              enableZoom={true}
+              enableDamping={true}
+              enablePan={false}
+              enableRotate={false}
+              dampingFactor={0.25}
+            />
+            <PresentationControls
+              enabled={true}
+              global
+              cursor={true}
+              snap={true}
+              speed={1.5}
+              zoom={1}
+              rotation={flipped ? snapConfig.back : snapConfig.front}
+              polar={[-Math.PI / 3, Math.PI / 3]}
+              azimuth={[-Math.PI / 1.4, Math.PI / 1.4]}
+            >
+              <Center>
+                <CardMesh flipped={flipped} onFlip={() => setFlipped(!flipped)} />
+              </Center>
+            </PresentationControls>
           </Suspense>
-          <OrbitControls enablePan={false} />
         </Canvas>
       </div>
     </div>
