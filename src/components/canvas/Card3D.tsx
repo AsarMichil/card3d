@@ -167,13 +167,26 @@ export function Card3D() {
 
   return (
     <div className='flex h-screen w-full items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-900 to-red-950'>
-      <div>
+      <div className='size-full'>
         <Canvas camera={{ position: [0, 0, 0.25], fov: 32 }} dpr={[1, 2]}>
           <ambientLight intensity={0.7} />
           <directionalLight position={[0.2, 0.6, 1]} intensity={1.5} />
           <directionalLight position={[-0.7, -0.3, 0.7]} intensity={0.9} />
           <directionalLight position={[0, 0.7, -1]} intensity={0.8} />
-          <Suspense fallback={<Html center>Loading Card...</Html>}>
+          <Suspense
+            fallback={
+              <Html center>
+                <div
+                  className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 transition-opacity duration-700`}
+                >
+                  <div className='relative mb-8 flex items-center justify-center'>
+                    <div className='size-24 animate-spin rounded-full border-8 border-red-700 border-y-white shadow-lg' />
+                    <div className='absolute left-1/2 top-1/2 h-12 w-9 -translate-x-1/2 -translate-y-1/2 -rotate-6 rounded-md border-2 border-white bg-gradient-to-br from-white to-red-700 shadow-md' />
+                  </div>
+                </div>
+              </Html>
+            }
+          >
             <OrbitControls
               enableZoom={true}
               enableDamping={true}
