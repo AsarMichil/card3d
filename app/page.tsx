@@ -20,7 +20,7 @@ function MainFlow() {
   }
 
   if (!selectedCharacter) {
-    return <CharacterSelect onSelect={setSelectedCharacter} selected={!!selectedCharacter} />
+    return <CharacterSelect onSelect={setSelectedCharacter} selected={!!selectedCharacter} character={selectedCharacter} />
   }
 
   // Show the 3D Card view after character selection

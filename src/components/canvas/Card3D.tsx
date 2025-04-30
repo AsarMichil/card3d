@@ -10,9 +10,16 @@ const CARD_HEIGHT = 0.088
 const CARD_DEPTH = 0.0005 // Thinner card
 
 function CardMesh({ flipped, onFlip }) {
+  const { selectedCharacter } = useCardContext()
+  
+  // Determine which front texture to use based on selected character
+  const frontTexturePath = selectedCharacter?.includes('Clairvoyant_Dreams') 
+    ? '/assets/card frame Clairvoyant Dreams V8 (with card art).png'
+    : '/assets/card frame Bitter Reprisal V8 (with card art).png'
+  
   // Progressive texture loading (low-res to high-res)
   const textures = useTexture({
-    frontMap: '/assets/card frame Bitter Reprisal V8 (with card art).png',
+    frontMap: frontTexturePath,
     backMap: '/assets/cardback JYNX.png',
     normalMap: '/assets/papermaps/Watercolor Paper 001 NORM.jpg',
     roughnessMap: '/assets/papermaps/Watercolor Paper Roughness.jpg',
