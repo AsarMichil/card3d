@@ -9,14 +9,14 @@ const CARD_WIDTH = 0.063
 const CARD_HEIGHT = 0.088
 const CARD_DEPTH = 0.0005 // Thinner card
 
-function CardMesh({ flipped, onFlip }) {
+function CardMesh() {
   const { selectedCharacter } = useCardContext()
-  
+
   // Determine which front texture to use based on selected character
-  const frontTexturePath = selectedCharacter?.includes('Clairvoyant_Dreams') 
+  const frontTexturePath = selectedCharacter?.includes('Clairvoyant_Dreams')
     ? '/assets/card frame Clairvoyant Dreams V8 (with card art).png'
     : '/assets/card frame Bitter Reprisal V8 (with card art).png'
-  
+
   // Progressive texture loading (low-res to high-res)
   const textures = useTexture({
     frontMap: frontTexturePath,
@@ -30,9 +30,6 @@ function CardMesh({ flipped, onFlip }) {
   const groupRef = useRef<THREE.Group>(null)
   const [hovered, setHovered] = useState(false)
   const [currentRotation, setCurrentRotation] = useState(0)
-  const [isPastHalfway, setIsPastHalfway] = useState(false)
-  const [isFlipping, setIsFlipping] = useState(false)
-  const [targetRotation, setTargetRotation] = useState(flipped ? Math.PI : 0)
 
   // Set up proper texture mapping
   useEffect(() => {
@@ -40,8 +37,8 @@ function CardMesh({ flipped, onFlip }) {
       // Fix texture settings
       ;[frontMap, backMap, normalMap, roughnessMap, aoMap].forEach((texture) => {
         if (texture) {
-          // Prevent texture flipping
-          texture.flipY = false
+          // Updated: Setting flipY to true ensures correct orientation
+          texture.flipY = true
 
           // Correct repetition settings
           texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping
@@ -53,19 +50,6 @@ function CardMesh({ flipped, onFlip }) {
     }
   }, [frontMap, backMap, normalMap, roughnessMap, aoMap])
 
-  // Update target rotation when flipped state changes
-  useEffect(() => {
-    setTargetRotation(flipped ? Math.PI : 0)
-  }, [flipped])
-
-  // Handle double-click to flip card
-  const handleDoubleClick = (e: ThreeEvent<MouseEvent>) => {
-    e.stopPropagation()
-    if (!isFlipping) {
-      onFlip()
-    }
-  }
-
   // Track rotation and handle past halfway
   useFrame(() => {
     if (!groupRef.current) return
@@ -74,20 +58,6 @@ function CardMesh({ flipped, onFlip }) {
     const rotation = groupRef.current.rotation.y % (Math.PI * 2)
     const normalizedRotation = rotation < 0 ? rotation + Math.PI * 2 : rotation
     setCurrentRotation(normalizedRotation)
-
-    // Determine if the card should be flipped based on current rotation
-    const shouldBeFlipped = normalizedRotation > Math.PI / 2 && normalizedRotation < (3 * Math.PI) / 2
-
-    // If we've crossed the halfway threshold and we're not already flipping
-    if (shouldBeFlipped !== flipped && !isFlipping) {
-      setIsFlipping(true)
-      onFlip()
-
-      // Reset flipping state after animation completes
-      setTimeout(() => {
-        setIsFlipping(false)
-      }, 500)
-    }
   })
 
   // Create a rounded rectangle shape for the card
@@ -111,12 +81,7 @@ function CardMesh({ flipped, onFlip }) {
   }
 
   return (
-    <group
-      ref={groupRef}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-      onDoubleClick={handleDoubleClick}
-    >
+    <group ref={groupRef} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
       {/* Front of card */}
       <mesh position={[0, 0, CARD_DEPTH / 2 + 0.00027]}>
         <planeGeometry args={[CARD_WIDTH - 0.0005, CARD_HEIGHT - 0.0005]} />
@@ -164,7 +129,7 @@ function CardMesh({ flipped, onFlip }) {
 }
 
 export function Card3D() {
-  const { flipped, setFlipped } = useCardContext()
+  const { setSelectedCharacter } = useCardContext()
 
   // Create specific snap positions for front and back
   const snapConfig = {
@@ -175,7 +140,28 @@ export function Card3D() {
   return (
     <div className='flex h-screen w-full items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-900 to-red-950'>
       <div className='size-full'>
-        <Canvas camera={{ position: [0, 0, 0.25], fov: 32 }} dpr={[1, 2]}>
+        {/* Back button overlay */}
+        <div className='absolute left-4 top-4 z-10'>
+          <button
+            className='flex items-center rounded-md  p-2 text-gray-300 transition-colors hover:text-white'
+            onClick={() => {
+              setSelectedCharacter(null)
+            }}
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              fill='none'
+              viewBox='0 0 24 24'
+              strokeWidth={1.5}
+              stroke='currentColor'
+              className='size-6'
+            >
+              <path strokeLinecap='round' strokeLinejoin='round' d='M15.75 19.5 8.25 12l7.5-7.5' />
+            </svg>
+            Change Card
+          </button>
+        </div>
+        <Canvas camera={{ position: [0, 0, 0.3], fov: 32 }} dpr={[1, 2]}>
           <ambientLight intensity={0.7} />
           <directionalLight position={[0.2, 0.6, 1]} intensity={1.5} />
           <directionalLight position={[-0.7, -0.3, 0.7]} intensity={0.9} />
@@ -208,12 +194,12 @@ export function Card3D() {
               snap={true}
               speed={1.5}
               zoom={1}
-              rotation={flipped ? snapConfig.back : snapConfig.front}
+              rotation={snapConfig.front}
               polar={[-Math.PI / 3, Math.PI / 3]}
               azimuth={[-Math.PI / 1.4, Math.PI / 1.4]}
             >
               <Center>
-                <CardMesh flipped={flipped} onFlip={() => setFlipped(!flipped)} />
+                <CardMesh />
               </Center>
             </PresentationControls>
           </Suspense>
