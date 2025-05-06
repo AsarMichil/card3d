@@ -138,7 +138,7 @@ export function Card3D() {
   }
 
   return (
-    <div className='flex h-screen w-full items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-900 to-red-950'>
+    <div className='flex h-screen w-full items-center justify-center bg-gradient-to-br from-neutral-900 via-red-950 to-blue-950'>
       <div className='size-full'>
         {/* Back button overlay */}
         <div className='absolute left-4 top-4 z-10'>

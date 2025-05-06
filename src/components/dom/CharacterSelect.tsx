@@ -11,7 +11,7 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({ onSelect, sele
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
 
   return (
-    <div className='flex h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-900 to-red-950'>
+    <div className='flex h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-neutral-900 via-red-950 to-blue-950'>
       <div className='flex flex-wrap items-center justify-center gap-x-6 gap-y-3 p-4'>
         <button
           type='button'
@@ -55,8 +55,8 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({ onSelect, sele
           onBlur={() => setHoveredCard(null)}
           aria-label='Select Clairvoyant Dreams Character'
           className={`relative h-[360px] w-[260px] cursor-pointer overflow-hidden rounded-2xl border-none shadow-xl outline-none transition-transform duration-200
-            ${selected && character === 'Clairvoyant_Dreams.jpg' ? ' shadow-red-700/40 ring-4 ring-red-700' : ''}
-            ${hoveredCard === 'Clairvoyant_Dreams.jpg' && (!selected || character !== 'Clairvoyant_Dreams.jpg') ? 'shadow-red-400/30 ring-2 ring-red-400' : ''}`}
+            ${selected && character === 'Clairvoyant_Dreams.jpg' ? ' shadow-blue-700/40 ring-4 ring-blue-700' : ''}
+            ${hoveredCard === 'Clairvoyant_Dreams.jpg' && (!selected || character !== 'Clairvoyant_Dreams.jpg') ? 'shadow-blue-400/30 ring-2 ring-blue-400' : ''}`}
         >
           <Image
             src='/assets/Clairvoyant_Dreams.jpg'
@@ -69,7 +69,7 @@ export const CharacterSelect: React.FC<CharacterSelectProps> = ({ onSelect, sele
             className={`pointer-events-none absolute inset-0 flex items-end justify-center transition-opacity duration-200
               ${hoveredCard === 'Clairvoyant_Dreams.jpg' || (selected && character === 'Clairvoyant_Dreams.jpg') ? 'opacity-100' : 'opacity-0'}`}
           >
-            <div className='w-full bg-gradient-to-t from-red-700/80 to-transparent pb-6 text-center'>
+            <div className='w-full bg-gradient-to-t from-blue-700/80 to-transparent pb-6 text-center'>
               <span className='font-serif text-lg font-bold text-white drop-shadow-lg'>
                 {selected && character === 'Clairvoyant_Dreams.jpg' ? 'Selected!' : 'Click to Select'}
               </span>
